@@ -1,0 +1,13 @@
+spring:
+  application:
+    name: Inventory
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/inventorydb
+    username: root
+    password: root
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
