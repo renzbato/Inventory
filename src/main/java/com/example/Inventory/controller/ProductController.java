@@ -8,7 +8,9 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.config.EnableSpringDataWebSupport;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -16,6 +18,7 @@ import java.util.List;
 @RestController
 @RequestMapping(path = "/product")
 @RequiredArgsConstructor
+@EnableSpringDataWebSupport(pageSerializationMode = EnableSpringDataWebSupport.PageSerializationMode.VIA_DTO)
 public class ProductController {
 
     private final ProductService service;
@@ -29,6 +32,7 @@ public class ProductController {
 
     // create product
     @PostMapping("/create")
+    @PreAuthorize(value = "hasRole('role_admin')")
     public ResponseEntity<String> createProduct(@RequestBody ProductModel payload) {
         try {
             service.createService(payload);
@@ -40,6 +44,7 @@ public class ProductController {
 
     // update product
     @PatchMapping("/update")
+    @PreAuthorize(value = "hasRole('role_admin')")
     public ResponseEntity<String> updateProduct(@RequestBody ProductModel payload) {
         try {
             service.updateService(payload);
@@ -51,6 +56,7 @@ public class ProductController {
 
     // Delete product
     @DeleteMapping("/delete")
+//    @PreAuthorize(value = "hasRole('role_admin')")
     public ResponseEntity<String> deleteProduct(@RequestParam(name = "param") int id) {
         service.deleteService(id);
         return ResponseEntity.ok("Product deleted successfully!");
@@ -60,6 +66,14 @@ public class ProductController {
     @PostMapping("/purchase")
     public ResponseEntity<PurchaseResponseDTO> purchase(@RequestBody List<PurchaseRequestDTO> payload) {
         PurchaseResponseDTO response = service.purchaseService(payload);
+        return ResponseEntity.ok(response);
+    }
+
+    // Find by ID
+    @GetMapping("/productId/{id}")
+    @PreAuthorize(value = "hasRole('role_admin')")
+    public ResponseEntity<ProductModel> findById(@PathVariable int id) {
+        ProductModel response = service.findById(id);
         return ResponseEntity.ok(response);
     }
 }

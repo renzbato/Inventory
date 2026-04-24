@@ -2,12 +2,33 @@ spring:
   application:
     name: Inventory
 
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:9090/realms/InventoryRealm
+#          jwk-set-uri: http://localhost:9090/realms/InventoryRealm/protocol/openid-connect/certs
+
+
   datasource:
     url: jdbc:postgresql://localhost:5432/inventorydb
     username: root
     password: root
     driver-class-name: org.postgresql.Driver
+
   jpa:
     hibernate:
       ddl-auto: update
     show-sql: false
+
+logging:
+  level:
+    org:
+      springframework:
+        security: DEBUG
+
+jwt:
+  auth:
+    converter:
+      resource-id: inventory
+      principle-attribute: preffered_username

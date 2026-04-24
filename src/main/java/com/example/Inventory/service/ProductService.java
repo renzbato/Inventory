@@ -1,11 +1,9 @@
 package com.example.Inventory.service;
 
-import com.example.Inventory.contracts.ServiceContracts;
 import com.example.Inventory.dto.PurchaseRequestDTO;
 import com.example.Inventory.dto.PurchaseInfoDTO;
 import com.example.Inventory.dto.PurchaseResponseDTO;
 import com.example.Inventory.exception.CustomRuntimeException;
-import com.example.Inventory.exception.GlobalExceptionHandler;
 import com.example.Inventory.model.ProductModel;
 import com.example.Inventory.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
@@ -17,23 +15,20 @@ import java.util.*;
 
 @Service
 @RequiredArgsConstructor
-public class ProductService extends ServiceContracts<ProductModel> {
+public class ProductService {
     private final ProductRepository repo;
 
     // Paginate
-    @Override
     public Page<ProductModel> paginateService(Pageable pageable) {
         return repo.findAll(pageable);
     }
 
     // Create
-    @Override
     public void createService(ProductModel payload) {
         repo.save(payload);
     }
 
     // Update
-    @Override
     public void updateService(ProductModel payload) {
         Optional<ProductModel> existingProduct = repo.findById(payload.getId());
         if(existingProduct.isEmpty()) {
@@ -57,7 +52,6 @@ public class ProductService extends ServiceContracts<ProductModel> {
     }
 
     // Delete
-    @Override
     public void deleteService(int id) {
         Optional<ProductModel> existingProduct = repo.findById(id);
 
@@ -109,5 +103,14 @@ public class ProductService extends ServiceContracts<ProductModel> {
                 .purchase(purchase)
                 .totalPurchase(totalPurchase)
                 .build();
+    }
+
+    // Find by ID
+    public ProductModel findById(int id) {
+        Optional<ProductModel> response = repo.findById(id);
+        if(response.isEmpty()) {
+            throw new CustomRuntimeException("Product does not exists");
+        }
+        return response.get();
     }
 }
