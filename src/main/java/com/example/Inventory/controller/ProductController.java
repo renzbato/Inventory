@@ -1,10 +1,10 @@
 package com.example.Inventory.controller;
 
+import com.example.Inventory.constants.Path;
 import com.example.Inventory.dto.PurchaseRequestDTO;
 import com.example.Inventory.dto.PurchaseResponseDTO;
 import com.example.Inventory.model.ProductModel;
 import com.example.Inventory.service.ProductService;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -31,8 +31,7 @@ public class ProductController {
     }
 
     // create product
-    @PostMapping("/create")
-    @PreAuthorize(value = "hasRole('role_admin')")
+    @PostMapping(Path.admin + "/create")
     public ResponseEntity<String> createProduct(@RequestBody ProductModel payload) {
         try {
             service.createService(payload);
@@ -43,8 +42,7 @@ public class ProductController {
     }
 
     // update product
-    @PatchMapping("/update")
-    @PreAuthorize(value = "hasRole('role_admin')")
+    @PatchMapping(Path.admin + "/update")
     public ResponseEntity<String> updateProduct(@RequestBody ProductModel payload) {
         try {
             service.updateService(payload);
@@ -55,8 +53,7 @@ public class ProductController {
     }
 
     // Delete product
-    @DeleteMapping("/delete")
-//    @PreAuthorize(value = "hasRole('role_admin')")
+    @DeleteMapping(Path.admin + "/delete")
     public ResponseEntity<String> deleteProduct(@RequestParam(name = "param") int id) {
         service.deleteService(id);
         return ResponseEntity.ok("Product deleted successfully!");
@@ -64,14 +61,15 @@ public class ProductController {
 
     // Purchase
     @PostMapping("/purchase")
-    public ResponseEntity<PurchaseResponseDTO> purchase(@RequestBody List<PurchaseRequestDTO> payload) {
-        PurchaseResponseDTO response = service.purchaseService(payload);
-        return ResponseEntity.ok(response);
+    public ResponseEntity<PurchaseResponseDTO> purchase2(@RequestBody List<PurchaseRequestDTO> payload) {
+        PurchaseResponseDTO productPurchased = service.validateListOfProductId(payload);
+        return ResponseEntity.ok(productPurchased);
     }
+
+
 
     // Find by ID
     @GetMapping("/productId/{id}")
-    @PreAuthorize(value = "hasRole('role_admin')")
     public ResponseEntity<ProductModel> findById(@PathVariable int id) {
         ProductModel response = service.findById(id);
         return ResponseEntity.ok(response);

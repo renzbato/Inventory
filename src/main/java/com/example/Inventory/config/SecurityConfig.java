@@ -21,10 +21,10 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) {
         http
                 .csrf(AbstractHttpConfigurer::disable)
-//                .authorizeHttpRequests(authorize -> authorize
-//                        .anyRequest()
-//                        .authenticated()
-//                )
+                .authorizeHttpRequests(authorize -> authorize
+                        .requestMatchers("/product/admin/**").hasAuthority("role_admin")
+                        .anyRequest().authenticated()
+                )
                 .oauth2ResourceServer(oauth2 -> oauth2.jwt(
                         jwt -> jwt.jwtAuthenticationConverter(jwtConverter)
                 ))

@@ -6,7 +6,7 @@ import java.util.List;
 
 @Builder
 public record PurchaseResponseDTO(
-        List<PurchaseInfoDTO> purchase,
+        List<PurchaseDTO> purchase,
         float totalPurchase
 ) {
 }
