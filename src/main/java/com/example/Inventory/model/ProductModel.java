@@ -30,6 +30,8 @@ public class ProductModel {
     private Float price;
     private Integer quantity;
 
+    private Boolean archive;
+
     @ManyToOne
     @JoinColumn(name = "category_id")
     private CategoryModel category;

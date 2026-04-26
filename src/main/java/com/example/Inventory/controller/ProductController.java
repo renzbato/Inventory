@@ -10,7 +10,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.config.EnableSpringDataWebSupport;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -25,31 +24,27 @@ public class ProductController {
 
     // paginate product
     @GetMapping("/paginate")
-    public ResponseEntity<Page<ProductModel>> paginateProduct(Pageable pageable) {
-        Page<ProductModel> response = service.paginateService(pageable);
+    public ResponseEntity<Page<ProductModel>> paginateProduct(Pageable pageable,
+                                                              @RequestParam(name = "archive", required = false) Boolean archive,
+                                                              @RequestParam(name = "category_id", required = false) Integer category_id,
+                                                              @RequestParam(name = "lessThanQuantity", required = false) Integer lessThanQuantity,
+                                                              @RequestParam(name = "greaterThanQuantity", required = false) Integer greaterThanQuantity) {
+        Page<ProductModel> response = service.paginateService(pageable, archive, category_id, lessThanQuantity, greaterThanQuantity);
         return ResponseEntity.ok(response);
     }
 
     // create product
     @PostMapping(Path.admin + "/create")
     public ResponseEntity<String> createProduct(@RequestBody ProductModel payload) {
-        try {
-            service.createService(payload);
-            return ResponseEntity.ok("Product Created Successfully");
-        } catch (Exception e) {
-            throw new RuntimeException(e.getMessage());
-        }
+        service.createService(payload);
+        return ResponseEntity.ok("Product Created Successfully");
     }
 
     // update product
     @PatchMapping(Path.admin + "/update")
     public ResponseEntity<String> updateProduct(@RequestBody ProductModel payload) {
-        try {
-            service.updateService(payload);
-            return ResponseEntity.ok("Product Update Successfully");
-        } catch (Exception e) {
-            throw new RuntimeException(e.getMessage());
-        }
+        service.updateService(payload);
+        return ResponseEntity.ok("Product Update Successfully");
     }
 
     // Delete product
@@ -65,7 +60,6 @@ public class ProductController {
         PurchaseResponseDTO productPurchased = service.validateListOfProductId(payload);
         return ResponseEntity.ok(productPurchased);
     }
-
 
 
     // Find by ID

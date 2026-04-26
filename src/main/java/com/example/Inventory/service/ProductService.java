@@ -4,8 +4,10 @@ import com.example.Inventory.dto.PurchaseDTO;
 import com.example.Inventory.dto.PurchaseRequestDTO;
 import com.example.Inventory.dto.PurchaseResponseDTO;
 import com.example.Inventory.exception.CustomRuntimeException;
+import com.example.Inventory.model.CategoryModel;
 import com.example.Inventory.model.ProductModel;
 import com.example.Inventory.model.PurchaseModel;
+import com.example.Inventory.repository.CategoryRepository;
 import com.example.Inventory.repository.ProductRepository;
 import com.example.Inventory.repository.PurchaseRepository;
 import lombok.RequiredArgsConstructor;
@@ -21,14 +23,28 @@ import java.util.*;
 public class ProductService {
     private final ProductRepository repo;
     private final PurchaseRepository purchaseRepo;
+    private final CategoryRepository categoryRepo;
 
     // Paginate
-    public Page<ProductModel> paginateService(Pageable pageable) {
-        return repo.findAll(pageable);
+    public Page<ProductModel> paginateService(Pageable pageable,
+                                              Boolean archive,
+                                              Integer category_id,
+                                              Integer lessThanQuantity,
+                                              Integer greaterThanQuantity) {
+
+        return repo.fetchAllNotArchive(pageable, archive, category_id, lessThanQuantity, greaterThanQuantity);
     }
 
     // Create
     public void createService(ProductModel payload) {
+        Optional<ProductModel> existingProduct = repo.findByName(payload.getName());
+
+        // throw if product name have matched in database
+        if(existingProduct.isPresent()) {
+            throw new CustomRuntimeException("Product already exist");
+        }
+
+        payload.setArchive(false);
         repo.save(payload);
     }
 
@@ -39,8 +55,9 @@ public class ProductService {
 
         // throw is product does not exit
         if(existingProduct.isEmpty()) {
-            throw new RuntimeException("Product does not exists!");
+            throw new CustomRuntimeException("Product does not exists!");
         }
+
         ProductModel newProduct = existingProduct.get();
 
         // set the product name if the payload is not null
@@ -58,6 +75,17 @@ public class ProductService {
             newProduct.setQuantity(payload.getQuantity());
         }
 
+        // set the product category if the payload is not null
+        if(Objects.nonNull(payload.getCategory())) {
+            Optional<CategoryModel> validateCategory = categoryRepo.findById(payload.getCategory().getId());
+
+            if(validateCategory.isEmpty()) {
+                throw new CustomRuntimeException("Invalid category!");
+            }
+
+            newProduct.setCategory(payload.getCategory());
+        }
+
         repo.save(newProduct);
     }
 
@@ -71,8 +99,14 @@ public class ProductService {
             throw new CustomRuntimeException("Product does not exists!");
         }
 
+        // throw if product already been archived
+        if(Objects.equals(existingProduct.get().getArchive(), true)) {
+            throw new CustomRuntimeException("Product already been archived");
+        }
+
         // delete product by id
-        repo.deleteById(existingProduct.get().getId());
+        existingProduct.get().setArchive(true);
+        repo.save(existingProduct.get());
     }
 
     // Find by ID
@@ -111,7 +145,7 @@ public class ProductService {
 
             // throw if the purchase quantity is greater than the available product quantity
             if(product.getQuantity() - purchase.quantity() < 0) {
-                throw new CustomRuntimeException("Can't proceed with the purchase the available product for " + product.getName() + " is " + product.getQuantity());
+                throw new CustomRuntimeException("Can't proceed with the purchase the available stock of " + product.getName() + " is " + product.getQuantity() + ", your order exceed the available product quantity!");
             }
 
             // update the product quantity
