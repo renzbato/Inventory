@@ -12,7 +12,9 @@ import org.springframework.data.web.config.EnableSpringDataWebSupport;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping(path = "/product")
@@ -55,7 +57,7 @@ public class ProductController {
     }
 
     // Purchase
-    @PostMapping("/purchase")
+    @PostMapping(Path.publicPath + "/purchase")
     public ResponseEntity<PurchaseResponseDTO> purchase2(@RequestBody List<PurchaseRequestDTO> payload) {
         PurchaseResponseDTO productPurchased = service.validateListOfProductId(payload);
         return ResponseEntity.ok(productPurchased);
@@ -66,6 +68,28 @@ public class ProductController {
     @GetMapping("/productId/{id}")
     public ResponseEntity<ProductModel> findById(@PathVariable int id) {
         ProductModel response = service.findById(id);
+        return ResponseEntity.ok(response);
+    }
+
+    // Low on stock
+    @GetMapping(Path.admin + "/lowOnStock")
+    public ResponseEntity<Map<String, Object>> lowOnStock(@RequestParam(name = "stock", defaultValue = "0") int stock) {
+        Map<String, Object> response = service.lowOnStock(stock);
+        return ResponseEntity.ok(response);
+    }
+
+    // Inventory summary
+    @GetMapping(Path.admin + "/productSummary")
+    public ResponseEntity<Map<String, Object>> productSummary() {
+        Map<String, Object> response = service.productSummary();
+        return ResponseEntity.ok(response);
+    }
+
+    // Sales report
+    @GetMapping(Path.admin + "/salesReport")
+    public ResponseEntity<Map<String, Object>> salesReport(@RequestParam(name = "from") LocalDate from,
+                                                           @RequestParam(name = "to") LocalDate to) {
+        Map<String, Object> response = service.salesReport(from, to);
         return ResponseEntity.ok(response);
     }
 }

@@ -1,8 +1,6 @@
 package com.example.Inventory.service;
 
-import com.example.Inventory.dto.PurchaseDTO;
-import com.example.Inventory.dto.PurchaseRequestDTO;
-import com.example.Inventory.dto.PurchaseResponseDTO;
+import com.example.Inventory.dto.*;
 import com.example.Inventory.exception.CustomRuntimeException;
 import com.example.Inventory.model.CategoryModel;
 import com.example.Inventory.model.ProductModel;
@@ -16,6 +14,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.*;
 
 @Service
@@ -32,7 +32,7 @@ public class ProductService {
                                               Integer lessThanQuantity,
                                               Integer greaterThanQuantity) {
 
-        return repo.fetchAllNotArchive(pageable, archive, category_id, lessThanQuantity, greaterThanQuantity);
+        return repo.fetchAll(pageable, archive, category_id, lessThanQuantity, greaterThanQuantity);
     }
 
     // Create
@@ -180,5 +180,83 @@ public class ProductService {
                 .purchase(purchaseList)
                 .totalPurchase(totalPurchase)
                 .build();
+    }
+
+    // Low on stock
+    public Map<String, Object> lowOnStock(int stock) {
+        List<ProductModel> response = repo.lowStock(stock);
+        List<LowOnStockDTO> stocks = new ArrayList<>();
+        for(ProductModel product : response) {
+            LowOnStockDTO stockDto = LowOnStockDTO
+                    .builder()
+                    .name(product.getName())
+                    .price(product.getPrice())
+                    .quantity(product.getQuantity())
+                    .build();
+            stocks.add(stockDto);
+        }
+        Map<String, Object> map = new HashMap<>();
+        map.put("title", "Low Stock Report");
+        map.put("items", stocks);
+        return map;
+    }
+
+    // Product summary
+    public Map<String, Object> productSummary() {
+        // data
+        List<ProductModel> totalProduct = repo.totalProducts();
+        int totalOutOfStock = repo.totalOutOfStock();
+        int totalArchived = repo.totalArchived();
+        LocalDateTime createdAt = LocalDateTime.now();
+
+        // map products
+        List<ProductSummaryDTO> productSummaryDTO = new ArrayList<>();
+        for(ProductModel product : totalProduct) {
+            ProductSummaryDTO productSummary = ProductSummaryDTO
+                    .builder()
+                    .name(product.getName())
+                    .quantity(product.getQuantity())
+                    .build();
+            productSummaryDTO.add(productSummary);
+        }
+
+        Map<String, Object> map = new LinkedHashMap<>();
+        map.put("title", "Product Summary");
+        map.put("products", productSummaryDTO);
+        map.put("available_products", totalProduct.size());
+        map.put("total_out_of_stock", totalOutOfStock);
+        map.put("total_archived", totalArchived);
+        map.put("created_at", createdAt);
+        return map;
+    }
+
+    // Sales report
+    public Map<String, Object> salesReport(LocalDate from, LocalDate to) {
+        // data
+        List<PurchaseModel> response = purchaseRepo.filterPurchase(from, to);
+        List<SalesReportDTO> salesReportDTO = new ArrayList<>();
+        float totalSales = 0;
+
+        // map sales report
+        for(PurchaseModel purchase : response) {
+            ProductModel product = purchase.getProduct();
+            SalesReportDTO salesReport = SalesReportDTO
+                    .builder()
+                    .name(product.getName())
+                    .price(product.getPrice())
+                    .quantity(purchase.getQuantity())
+                    .build();
+            totalSales += product.getPrice() * purchase.getQuantity();
+            salesReportDTO.add(salesReport);
+        }
+
+        // response
+        Map<String, Object> map = new LinkedHashMap<>();
+        map.put("title", "Sales Report");
+        map.put("item", salesReportDTO);
+        map.put("total_sales", totalSales);
+        map.put("from", from);
+        map.put("to", to);
+        return map;
     }
 }
