@@ -1,8 +1,7 @@
 package com.example.Inventory.service;
 
-import com.example.Inventory.dto.account.AccessTokenDTO;
 import com.example.Inventory.dto.account.RegisterFormDTO;
-import com.example.Inventory.dto.account.UserInfoDTO;
+import com.example.Inventory.dto.account.UserRepDTO;
 import com.example.Inventory.exception.CustomRuntimeException;
 import jakarta.ws.rs.core.Response;
 import org.keycloak.admin.client.CreatedResponseUtil;
@@ -11,20 +10,23 @@ import org.keycloak.representations.idm.ClientRepresentation;
 import org.keycloak.representations.idm.CredentialRepresentation;
 import org.keycloak.representations.idm.RoleRepresentation;
 import org.keycloak.representations.idm.UserRepresentation;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
-import org.springframework.util.LinkedMultiValueMap;
-import org.springframework.util.MultiValueMap;
-import org.springframework.web.client.RestTemplate;
-import tools.jackson.core.type.TypeReference;
-import tools.jackson.databind.ObjectMapper;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
 @Service
 public class AccountService {
-    private final RestTemplate restTemplate = new RestTemplate();
+    @Value(value = "${realm.inventory}")
+    private String inventoryRealm;
+
+    @Value(value = "${realm.supplier}")
+    private String supplierRealm;
+
     Keycloak keycloak = Keycloak.getInstance(
             "http://localhost:9090",
             "master",
@@ -32,51 +34,57 @@ public class AccountService {
             "admin",
             "admin-cli");
 
-    public String adminAccessToken() {
-        String url = "http://localhost:9090/realms/master/protocol/openid-connect/token";
+    // fetch client
+    private ClientRepresentation fetchClientMethod(String realm, String clientId) {
+       return keycloak.realm(realm)
+                .clients()
+                .findByClientId(clientId)
+                .get(0);
+    }
 
-        // set headers
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+    // list users method
+    private List<UserRepresentation> usersListMethod(String realm) {
+        return keycloak
+                .realm(realm)
+                .users()
+                .list();
+    }
 
-        // set body
-        MultiValueMap<String, String> map = new LinkedMultiValueMap<>();
-        map.add("client_id", "admin-cli");
-        map.add("username", "admin");
-        map.add("password", "admin");
-        map.add("grant_type", "password");
-
-        // set http
-        HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(map, headers);
-
-        // send request
-        ResponseEntity<String> res = restTemplate.exchange(url, HttpMethod.POST, request, String.class);
-        ObjectMapper mapper = new ObjectMapper();
-        AccessTokenDTO mapped = mapper.readValue(res.getBody(), AccessTokenDTO.class);
-
-        return mapped.access_token();
+    // list roles method
+    private List<String> roleMethod(String realm, String userId, String clientId) {
+        return keycloak.realm(realm)
+                .users()
+                .get(userId)
+                .roles()
+                .clientLevel(clientId)
+                .listAll()
+                .stream()
+                .map(RoleRepresentation::getName)
+                .toList();
     }
 
     // list users
-    public List<UserInfoDTO> listAllUsers() {
-        // data
-        String allUsersUrl = "http://localhost:9090/admin/realms/InventoryRealm/users";
-        String accessToken = adminAccessToken();
+    public List<UserRepDTO> userList() {
+        List<UserRepresentation> response = usersListMethod(inventoryRealm);
+        List<UserRepDTO> userRepList = new ArrayList<>();
 
-        // set headers
-        HttpHeaders headers = new HttpHeaders();
-        headers.setBearerAuth(accessToken);
+        for(UserRepresentation rep : response) {
+            ClientRepresentation client = fetchClientMethod(inventoryRealm, "inventory");
+            List<String> role = roleMethod(inventoryRealm, rep.getId(), client.getId());
 
-        // set http
-        HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(headers);
+            UserRepDTO userRepDTO = UserRepDTO
+                    .builder()
+                    .id(rep.getId())
+                    .email(rep.getEmail())
+                    .firstName(rep.getFirstName())
+                    .lastName(rep.getLastName())
+                    .roles(role)
+                    .build();
 
-        // send request
-        ResponseEntity<String> res = restTemplate.exchange(allUsersUrl, HttpMethod.GET, request, String.class);
+            userRepList.add(userRepDTO);
 
-        // map and return
-        ObjectMapper mapper = new ObjectMapper();
-        return mapper.readValue(res.getBody(), new TypeReference<>(){});
-
+        }
+        return userRepList;
     }
 
     // register
@@ -103,33 +111,33 @@ public class AccountService {
 
         try {
             // create user
-            Response response = keycloak.realm("InventoryRealm")
+            Response response = keycloak.realm(inventoryRealm)
                     .users()
                     .create(userRepresentation);
 
             String userId = CreatedResponseUtil.getCreatedId(response);
 
             // set password
-            keycloak.realm("InventoryRealm")
+            keycloak.realm(inventoryRealm)
                     .users()
                     .get(userId)
                     .resetPassword(setPassword);
 
             // set role
-            ClientRepresentation client = keycloak.realm("InventoryRealm")
+            ClientRepresentation client = keycloak.realm(inventoryRealm)
                     .clients()
                     .findByClientId("inventory")
                     .get(0);
 
 
-            RoleRepresentation role = keycloak.realm("InventoryRealm")
+            RoleRepresentation role = keycloak.realm(inventoryRealm)
                     .clients()
                     .get(client.getId())
                     .roles()
                     .get("role_user")
                     .toRepresentation();
 
-            keycloak.realm("InventoryRealm")
+            keycloak.realm(inventoryRealm)
                     .users()
                     .get(userId)
                     .roles()
@@ -141,5 +149,43 @@ public class AccountService {
             throw new CustomRuntimeException(e.getMessage());
         }
 
+    }
+
+    // list supplier
+    public List<UserRepDTO> supplierList() {
+        List<UserRepresentation> response = usersListMethod(supplierRealm);
+        List<UserRepDTO> userRepList = new ArrayList<>();
+
+        for(UserRepresentation rep : response) {
+            ClientRepresentation client = fetchClientMethod(supplierRealm, "supplier");
+            List<String> role = roleMethod(supplierRealm, rep.getId(), client.getId());
+
+            UserRepDTO userRepDTO = UserRepDTO
+                    .builder()
+                    .id(rep.getId())
+                    .email(rep.getEmail())
+                    .firstName(rep.getFirstName())
+                    .lastName(rep.getLastName())
+                    .roles(role)
+                    .build();
+
+            userRepList.add(userRepDTO);
+
+        }
+        return userRepList;
+    }
+
+    // validate supplier
+    public String validSupplier(String id) {
+        try {
+            UserRepresentation supplier = keycloak.realm(supplierRealm)
+                    .users()
+                    .get(id)
+                    .toRepresentation();
+
+            return supplier.getId();
+        } catch (RuntimeException e) {
+            throw new CustomRuntimeException(e.getMessage());
+        }
     }
 }

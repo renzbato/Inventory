@@ -34,3 +34,7 @@ jwt:
     converter:
       resource-id: inventory
       principle-attribute: preffered_username
+
+realm:
+  inventory: InventoryRealm
+  supplier: SupplierRealm

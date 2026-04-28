@@ -44,6 +44,11 @@ public class ProductService {
             throw new CustomRuntimeException("Product already exist");
         }
 
+        // throw if supplier is empty or blank
+        if(payload.getSupplier().isEmpty() || payload.getSupplier().isBlank()) {
+            throw new CustomRuntimeException("Supplier is empty");
+        }
+
         payload.setArchive(false);
         repo.save(payload);
     }
@@ -137,7 +142,7 @@ public class ProductService {
                 throw new CustomRuntimeException("Quantity must be greater than zero");
             }
 
-            if(existingProduct.isEmpty()) {
+            if(existingProduct.isEmpty() || existingProduct.get().getArchive() == true) {
                 throw new CustomRuntimeException("Product does not exist");
             }
 

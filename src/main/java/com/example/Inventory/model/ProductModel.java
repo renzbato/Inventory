@@ -30,6 +30,8 @@ public class ProductModel {
 
     private Boolean archive;
 
+    private String supplier;
+
     @ManyToOne
     @JoinColumn(name = "category_id")
     private CategoryModel category;

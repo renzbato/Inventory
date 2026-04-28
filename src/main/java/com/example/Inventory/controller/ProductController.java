@@ -4,6 +4,7 @@ import com.example.Inventory.constants.Path;
 import com.example.Inventory.dto.PurchaseRequestDTO;
 import com.example.Inventory.dto.PurchaseResponseDTO;
 import com.example.Inventory.model.ProductModel;
+import com.example.Inventory.service.AccountService;
 import com.example.Inventory.service.ProductService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -23,6 +24,7 @@ import java.util.Map;
 public class ProductController {
 
     private final ProductService service;
+    private final AccountService accountService;
 
     // paginate product
     @GetMapping("/paginate")
@@ -38,6 +40,7 @@ public class ProductController {
     // create product
     @PostMapping(Path.admin + "/create")
     public ResponseEntity<String> createProduct(@RequestBody ProductModel payload) {
+        accountService.validSupplier(payload.getSupplier());
         service.createService(payload);
         return ResponseEntity.ok("Product Created Successfully");
     }
